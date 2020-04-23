@@ -1,0 +1,220 @@
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<head>
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+	<script>
+		$(document).ready(function(){
+			$(".tabs li a").click(function() {
+				
+				// Active state for tabs
+				$(".tabs li a").removeClass("active");
+				$(this).addClass("active");
+				
+				// Active state for Tabs Content
+				$(".tab_content_container > .tab_content_active").removeClass("tab_content_active").fadeOut(200);
+				$(this.rel).fadeIn(500).addClass("tab_content_active");
+				
+			}); 
+
+		});
+	</script>
+	<style>
+		<style>
+			.headerimage
+			{
+			  position: relative;
+			  top: 0;
+			  left: 0;
+			  object-fit: fill;
+			}
+		</style>
+</head>
+<body>
+	<img src="mental health.jpg" class="headerimage" width="100%" height="200" />
+
+</body>
+<div class="wrapper">
+    <ul class="tabs">
+        <li><a href="javascript:void(0); return false;" rel="#tabcontent1" class="tab active">About</a></li>
+        <li><a href="javascript:void(0); return false;" rel="#tabcontent2" class="tab">Architecture</a></li>
+        <li><a href="javascript:void(0); return false;" rel="#tabcontent3" class="tab">Data - S3</a></li>
+        <li><a href="javascript:void(0); return false;" rel="#tabcontent4" class="tab">Model - Sagemaker</a></li>
+        <li><a href="javascript:void(0); return false;" rel="#tabcontent5" class="tab">Demo</a></li>
+    </ul>
+    
+    <div class="tab_content_container">
+        <div class="tab_content tab_content_active" id="tabcontent1" name="about">
+            <h1 style="text-align:center">Mental Health Disorders at IT Workspace</h1>
+			<h3 style="text-align:right">
+				By Akhil Kumar Baipaneni & Madhuri Yadav
+			</h3>
+			<h2 style="text-align:left">Agenda</h2>
+			<ul>
+				<li>Introduction</li>
+				<li>Architecture</li>
+				<li>About our Data</li>
+				<li>Preprocessing & Modeling</li>
+				<li>Demo</li>
+			</ul>
+
+			<h2 style="text-align:left">Background</h2>
+				<p>		Mental illnesses, such as depression and anxiety, affect people's
+				ability to participate in health-promoting behaviors. In turn,
+				problems with physical health, such as chronic diseases, can have
+				a serious impact on mental health and decrease a person's ability
+				to participate in treatment and recovery.</p>
+
+			<h2 style="text-align:left">Problem statement</h2>
+				<p>		To identify the strongest predictors of mental health illness & to
+						predict if a person needs mental treatment in the workplace using
+						SageMaker and other AWS services.</p>
+			<h2 style="text-align:left">Agile Methodology is Followed for This Project</h2>
+				<img width = "400" src="images/agile.png" />
+			<h2 style="text-align:left">Proposed solution</h2>
+				<img width = "400" src="images/method.png" />
+			<h2 style="text-align:left">Machine Learning Workflow</h2>
+				<img width = "400" src="images/mlworkflow.png" />
+        </div>
+        
+        <div class="tab_content" id="tabcontent2">
+            <h3>Architecture</h3>
+			<h3 style="text-align:left">Final Model Architecture.</h3>
+				<img width = "550" src="images/Final_Model_Architecture1.jpeg" />
+			<p>We have used cloudformation template in yaml format to create a cloudformation stack which will automatically deploy and also delete the AWS resources required for the project. So using cloudformation stack, we are creating IAM Roles, S3, VPC, Subnet, Security group, Route table, Internet gateway, Network Interface, Network ACL's, Lambda, Sagemaker Notebook Instance and S3 website hosting.</p> 
+			<h3 style="text-align:left">Network Architecture.</h3>			
+				<img width = "550" src="images/NetworkArchitecture.PNG" />     			
+            
+        </div>
+        
+        <div class="tab_content" id="tabcontent3">
+            <h2 style="text-align:left">S3 Bucket</h2>
+            <p>S3 bucket is created with public access to store the data and to host the website. The raw data and the output generated is stored in the s3 bucket.</p>
+			<h2 style="text-align:left">Our Dataset - Mental Health Disorder Survey</h2>
+			<p>The data for this project is taken from one of the Kaggel compititions and the main source for the data is <a href="https://osmihelp.org/about/about-osmi" target="_blank">https://osmihelp.org/about/about-osmi</a> OSMI - Open Sourcing Mental Illness is a non profit Corpotation dedicated to raising awarness towards mental health and educating and providing resources to mental health. The data used for this project is from 2014 survey connducted by the organization. The survey measures emploees and employers attitude towards mental health in the IT corporate.</p>
+			<p>Our data set is as mentioned from 2014 survey has 27 features and 1260 observations. The data description is as below</p>
+			
+			<ol>
+				<li>Timestamp:	Time the survey was submitted
+				<li>Age:	Respondent age
+				<li>Gender:	Respondent gender
+				<li>Country:	Respondent country
+				<li>State:	If you live in the United States, which state or territory do you live in?
+				<li>Self Emplyed:	Are you self-employed?
+				<li>Family History:	Do you have a family history of mental illness?
+				<li>Treatment:	Have you sought treatment for a mental health condition?
+				<li>Work Interfere:	If you have a mental health condition, do you feel that it interferes with your work?
+				<li>No employees:	How many employees does your company or organization have?
+				<li>Remote work:	Do you work remotely (outside of an office) at least 50% of the time?
+				<li>Tech company:	Is your employer primarily a tech company/organization?
+				<li>Benefits:	Does your employer provide mental health benefits?
+				<li>Care option:	Do you know the options for mental health care your employer provides?
+				<li>Wellness program:	Has your employer ever discussed mental health as part of an employee wellness program?
+				<li>Seek help:	Does your employer provide resources to learn more about mental health issues and how to seek help?
+				<li>Anonymity:	Is your anonymity protected if you choose to take advantage of mental health or substance abuse treatment
+				<li>Leave:	How easy is it for you to take medical leave for a mental health condition?
+				<li>Mental_health_consequence:	Do you think that discussing a mental health issue with your employer would have negative consequences?
+				<li>Phys_health_consequence:	Do you think that discussing a physical health issue with your employer would have negative consequences?
+				<li>Coworkers:	Would you be willing to discuss a mental health issue with your coworkers?
+				<li>Supervisor:	Would you be willing to discuss a mental health issue with your direct supervisor(s)?
+				<li>Mental_health_interview:	Would you bring up a mental health issue with a potential employer in an interview?
+				<li>Phys_health_interview:	Would you bring up a physical health issue with a potential employer in an interview?
+				<li>Mental_vs_physical:	Do you feel that your employer takes mental health as seriously as physical health?
+				<li>Obs_consequence:	Have you heard of or observed negative consequences for coworkers with mental health conditions in your workplace?
+				<li>Comments:	Any additional notes or comments
+			</ol>
+		</div>
+        <div class="tab_content" id="tabcontent4">
+            <h2>Preprocessing & Modeling</h2>
+            <p>The data is stored in data frame from S3 bucket. Data is then devided into 80% & 20% Train and Test respectively. Train data is then devided into 80% & 20% Train and validation respectively.</p>
+			</li>
+				<li>Since 'Timestamp' is an identifier the column is removed from the data set as it will not contribute towards the prediction. </li>
+				<li>Since around 87% of the data is missing in 'comments' and 40% of the data is missing in 'state', these columns have been removed. </li>
+				<li>Nan values in 'self_employed' are replaces by No. </li>
+				<li>Age values <18 and >100 have been removed. (11 rows have been deleted)</li>
+				<li>Gender values like "male", "m", "male-ish", "trans-female", "something kinda male?", "cis female", "f" have been repleced with appropriate values.</li>
+				<li>Further we encoding the categorical features.(One Hot Encoding)</li>
+				<li>Performed label encoding on the target variable.</li>
+				<li>Using StandardScaler data is scaled.</li>
+			</ul>
+			<h3>Unique featurs and data values after preprocessing</h3>
+				<ul>
+					<li>'Gender': ['male', 'female', 'trans']</li>
+					<li>'self_employed': ['No', 'Yes']</li>
+					<li>'family_history': ['No', 'Yes']</li>
+					<li>'treatment': ['No', 'Yes']</li>
+					<li>'work_interfere': ['Sometimes', nan, 'Never', 'Often', 'Rarely']</li>
+					<li>'no_employees': ['More than 1000', '1-5', '26-100', '6-25', '100-500', '500-1000']</li>
+					<li>'remote_work': ['Yes', 'No']</li>
+					<li>'tech_company': ['Yes', 'No']</li>
+					<li>'benefits': ['No', "Don't know", 'Yes']</li>
+					<li>'care_options': ['Not sure', 'No', 'Yes']</li>
+					<li>'wellness_program': ['No', "Don't know", 'Yes']</li>
+					<li>'seek_help': ['No', "Don't know", 'Yes']</li>
+					<li>'anonymity': ["Don't know", 'Yes', 'No']</li>
+					<li>'leave': ['Very difficult', 'Very easy', "Don't know", 'Somewhat easy', 'Somewhat difficult']</li>
+					<li>'mental_health_consequence': ['Yes', 'Maybe', 'No']</li>
+					<li>'phys_health_consequence': ['Maybe', 'No', 'Yes']</li>
+					<li>'coworkers': ['No', 'Some of them', 'Yes']</li>
+					<li>'supervisor': ['No', 'Yes', 'Some of them']</li>
+					<li>'mental_health_interview': ['No', 'Maybe', 'Yes']</li>
+					<li>'phys_health_interview': ['Maybe', 'Yes', 'No']</li>
+					<li>'mental_vs_physical': ['No', "Don't know", 'Yes']</li>
+					<li>'obs_consequence': ['Yes', 'No']</li>
+				</ul>
+			<p> 112 features are the number of features and 796, 200, 249 are the number of observations in respectively in train, valid and test after preprocessing.</p>
+			
+			<h3>EDA</h3>
+			<h3 style="text-align:left">Checking whether data is balanced.</h3>
+				<img src="images/output1.png" />
+			<h3 style="text-align:left">Distribution of people who have taken survey based on their gender</h3>
+				<img src="images/output2.png" />
+			<h3 style="text-align:left">Distribution of both the target classes over gender</h3>
+				<img src="images/output11.png" />
+			<h3 style="text-align:left">Distribution of both the target classes over work interference</h3>
+				<img src="images/output3.png" />
+			<h3 style="text-align:left">Distribution of both the target classes based on occupation</h3>
+				<img src="images/output4.png" />
+			<h3 style="text-align:left">Distribution of both the target classes based on family_history</h3>
+				<img src="images/output5.png" />
+			<h3 style="text-align:left">Distribution of both the target classes based on size of the company</h3>
+				<img src="images/output6.png" />
+			<h3 style="text-align:left">Distribution of both the target classes based on ease with which leave is avalable</h3>
+				<img src="images/output7.png" />
+			<h3 style="text-align:left">Distribution of both the target classes based on whether remote work is avalable</h3>
+				<img src="images/output8.png" />
+			<h3 style="text-align:left">Does your employer takes mental health as seriously as physical health?</h3>
+				<img src="images/output9.png" />			
+			<p> As we do not deep analysis by just looking at the data pattern we further perform feature importance using random forest </p>
+			<h3 style="text-align:left">Checking whether data is balanced.</h3>
+				<img src="images/output10.png" />			
+			<h3>Hyperparameter Tuning and Model Selection</h3>
+			<h3>Models applied</h3>
+				<ul>
+					<li>LogisticRegression</li>
+					<li>DecisionTreeClassifier</li>
+					<li>RandomForestClassifier</li>
+					<li>HistGradientBoostingClassifier</li>
+					<li>XGBClassifier</li>
+					<li>MLPClassifier</li>
+				</ul>
+			<h3>Best Model</h3>
+			<p> The model that worked best for above data was XGBoost below are the results of the model.</p>
+			<p> After training the model, we will save the model artifacts into AWS S3 for future use. Model artifacts will be contain hyperparameter values of our best model.</p>
+			<ul>
+				<li>Accuracy Score : 87.55020080321285</li>
+				<li>ROC_AUC :  87.5290322580645</li>
+				<li>Cohen Kappa:  75.08955368380289</li>
+				<li><img width = "400" src="images/AUC.PNG" /></li>
+				<li><img width = "400" src="images/Confusion Matrix.PNG" /></li>
+			</ul>			
+        </div>
+        
+        <div class="tab_content" id="tabcontent5">
+            <h2 style="text-align:left">VPC & S3 bucket creation</h2>
+				<video width="1000" controls>
+				  <source src="images/movie.mp4" type="video/mp4">
+				  Your browser does not support the video tag.
+				</video>
+        </div>
+    </div>
+</div>
