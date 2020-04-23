@@ -1,0 +1,369 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS CloudFormation Template for Creating AWS SAGEMAKER and VPC
+Parameters:
+  EnvironmentNamePrefix:
+    # Name which will be prefixed to AWS resources
+    Description: Name which will be prefixed to AWS resources
+    Type: String
+    Default: cc-13
+  NotebookInstanceName:
+    AllowedPattern: '[A-Za-z0-9-]{1,63}'
+    ConstraintDescription: Maximum of 63 alphanumeric characters. Can include hyphens
+      (-), but not spaces. Must be unique within your account in an AWS Region.
+    Description: SageMaker Notebook instance name
+    MaxLength: '63'
+    MinLength: '1'
+    Type: String
+    Default: 'CFNotebookInstance'
+  NotebookInstanceType:
+    AllowedValues:
+      - ml.t2.medium
+      - ml.m4.xlarge
+      - ml.p2.xlarge
+    ConstraintDescription: Must select a valid notebook instance type.
+    Default: ml.t2.medium
+    Description: Select Instance type for the SageMaker Notebook
+    Type: String
+  SubnetVPC:
+    Description: The ID of the subnet in a VPC to which you would like to have a connectivity
+      from your ML compute instance.
+    Type: String
+    MinLength: '6'
+    MaxLength: '11'
+    Default: 10.3.0
+    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})'
+Resources:
+  mentalhealthsurveys3bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+      BucketName: !Join [ "-", [ !Ref EnvironmentNamePrefix, mentalhealthsurvey ] ]
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+    DeletionPolicy: Retain
+#
+# IAM resources
+#
+  SagemakerS3ROLE:
+    Type: "AWS::IAM::Role"
+    Properties: 
+      RoleName: !Join [ "-", [ !Ref EnvironmentNamePrefix, Sagemaker-S3-ROLE ] ]
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "sagemaker.amazonaws.com"
+            Action:
+                - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
+      Path: "/service-role/"
+      Policies: 
+        - 
+          PolicyName: !Join [ "-", [ !Ref EnvironmentNamePrefix, SAGEMAKER-S3-Access ] ]
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: 1
+                Effect: Allow
+                Action:
+                  - "s3:ListBucket"
+                Resource:
+                  - !Join [ "", [ 'arn:aws:s3:::', !Ref 'mentalhealthsurveys3bucket'] ]
+              - Sid: 2
+                Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                  - "s3:PutObject"
+                  - "s3:DeleteObject"
+                Resource:
+                  - !Join [ "", [ 'arn:aws:s3:::', !Ref 'mentalhealthsurveys3bucket', '/*'] ]
+#
+# Lambda function Role to create Notebook Instance
+#
+  CreateNotebookFunctionExecuteRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: !Join [ "-", [ !Ref EnvironmentNamePrefix, CreateNotebookFunctionPolicy ] ]
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - sagemaker:*
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: !GetAtt 'SagemakerS3ROLE.Arn'
+              - Effect: Allow
+                Action:
+                  - ec2:*
+                Resource: '*'
+#
+# VPC and internet gateway
+#
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      CidrBlock: !Join [ ".", [ !Ref SubnetVPC, 0/16 ] ]
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref EnvironmentNamePrefix, MentalHealthVPC ] ]
+        - Key: CFStack
+          Value: !Ref 'AWS::StackName'
+        - Key: CustomerEnvironment
+          Value: !Ref EnvironmentNamePrefix
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref EnvironmentNamePrefix, IG] ]
+        - Key: Service
+          Value: VPC
+        - Key: Network
+          Value: VPC
+        - Key: CFStack
+          Value: !Ref 'AWS::StackName'
+        - Key: Environment
+          Value: !Ref EnvironmentNamePrefix
+  AttachIGWtoVPC:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties: 
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+#
+# Public Subnet
+#
+  PublicSubneta:
+    # Defined by the network team
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      VpcId: !Ref VPC
+      CidrBlock: !Join [ ".", [ !Ref SubnetVPC, 0/20 ] ]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref EnvironmentNamePrefix, PublicSubnet ] ]
+        - Key: Service
+          Value: Public
+        - Key: Network
+          Value: Public
+        - Key: CFStack
+          Value: !Ref 'AWS::StackName'
+        - Key: Environment
+          Value: !Ref EnvironmentNamePrefix           
+#
+# Route tables
+#
+  PublicRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref EnvironmentNamePrefix, PublicRouteTable] ]
+        - Key: Service
+          Value: Public
+        - Key: Network
+          Value: Public
+        - Key: CFStack
+          Value: !Ref 'AWS::StackName'
+        - Key: Environment
+          Value: !Ref EnvironmentNamePrefix
+  PublicSubnetaToPublicRouteTable:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubneta
+  PublicInternetRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTable
+  MentalHealthSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: !Join [ "-", [ !Ref EnvironmentNamePrefix, MentalHealthSG ] ]
+      GroupDescription: !Join [ "-", [ !Ref EnvironmentNamePrefix, MentalHealthSG ] ]
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref EnvironmentNamePrefix, MentalHealthSG ] ]
+        - Key: Service
+          Value: Public
+        - Key: Network
+          Value: Web
+        - Key: CFStack
+          Value: !Ref 'AWS::StackName'
+        - Key: Environment
+          Value: !Ref EnvironmentNamePrefix
+  Globalacl:
+    Type: "AWS::EC2::NetworkAcl"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref EnvironmentNamePrefix, GLOBAL-ACL ] ]
+        - Key: Service
+          Value: All
+        - Key: Network
+          Value: All
+        - Key: CFStack
+          Value: !Ref 'AWS::StackName'
+        - Key: Environment
+          Value: !Ref EnvironmentNamePrefix
+      VpcId: !Ref VPC
+  AssociatePublicSubnetawithGlobalacl:
+    # Associates the Public subnet with the Global ACL
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubneta
+      NetworkAclId: !Ref Globalacl
+  ACLAllowAnyOut:
+    # Allows any out
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref Globalacl
+      RuleNumber: 101
+      Protocol: -1
+      RuleAction: allow
+      Egress: true
+      CidrBlock: 0.0.0.0/0
+  ACLAllowAnyIn:
+    # Allows any in
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref Globalacl
+      RuleNumber: 102
+      Protocol: -1
+      RuleAction: allow
+      Egress: false
+      CidrBlock: 0.0.0.0/0
+  MentalHealthNetworkInterface:
+    Type: 'AWS::EC2::NetworkInterface'
+    Properties:
+      Description: AWS Network interface
+      SubnetId: !Ref PublicSubneta
+      SourceDestCheck: 'true'
+      PrivateIpAddresses:
+        - PrivateIpAddress: !Join [ ".", [ !Ref SubnetVPC, 5 ] ]
+          Primary: 'true'
+      GroupSet:
+        - !Ref MentalHealthSecurityGroup
+    DependsOn:
+      - MentalHealthSecurityGroup
+#
+  CreateNotebookFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Create a SageMaker Notebook instance and return the ARN.
+      Handler: index.lambda_handler
+      Runtime: python3.6
+      Timeout: '300'
+      Role: !GetAtt 'CreateNotebookFunctionExecuteRole.Arn'
+      Code:
+        ZipFile: |
+          import json
+          import cfnresponse
+          import boto3
+          client = boto3.client('sagemaker')
+          def lambda_handler(event, context):
+            if event['RequestType'] == 'Delete':
+              try:
+                print('Received delete event')
+                print(str(event))
+                delete_response = client.stop_notebook_instance(
+                  NotebookInstanceName=event['ResourceProperties']['NotebookInstanceName']
+                )
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+              except Exception as inst:
+                print(inst)
+                cfnresponse.send(event, context, cfnresponse.FAILED, {})
+            else:
+              try:
+                subnetId = event['ResourceProperties']['SubnetId']
+                sgId = event['ResourceProperties']['SecurityGroupId']
+                input_dict = {}
+                input_dict['NotebookInstanceName'] = event['ResourceProperties']['NotebookInstanceName']
+                input_dict['InstanceType'] = event['ResourceProperties']['NotebookInstanceType']
+                input_dict['RoleArn'] = event['ResourceProperties']['SageMakerRoleArn']
+                if subnetId:
+                  input_dict['SubnetId'] = subnetId
+                if sgId:
+                  input_dict['SecurityGroupIds'] = [sgId]
+                instance = client.create_notebook_instance(**input_dict)
+                # waiter = client.get_waiter('notebook_instance_in_service')
+                # waiter.wait(NotebookInstanceName=event['ResourceProperties']['NotebookInstanceName'])
+                print('Sagemager CLI response')
+                print(str(instance))
+                responseData = {'NotebookInstanceArn': instance['NotebookInstanceArn']}
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+              except Exception as inst:
+                print(inst)
+                cfnresponse.send(event, context, cfnresponse.FAILED, {})
+  CreateNotebook:
+    Type: Custom::CreateNotebook
+    Properties:
+      ServiceToken: !GetAtt CreateNotebookFunction.Arn
+      NotebookInstanceName: !Ref 'NotebookInstanceName'
+      NotebookInstanceType: !Ref 'NotebookInstanceType'
+      SubnetId: !Ref PublicSubneta
+      SecurityGroupId: !Ref MentalHealthSecurityGroup
+      SageMakerRoleArn: !GetAtt SagemakerS3ROLE.Arn
+      Version: 1      
+#
+# CloudFormation script Outputs
+#
+Outputs:
+  WebsiteURL:
+    Value: !GetAtt [mentalhealthsurveys3bucket, WebsiteURL]
+    Description: URL for website hosted on S3
+  S3BucketSecureURL:
+    Value: !Join ['', ['https://', !GetAtt [mentalhealthsurveys3bucket, DomainName]]]
+    Description: Name of S3 bucket to hold website content
+  SagemakerS3ROLE:
+    Value: !GetAtt SagemakerS3ROLE.Arn
+    Description: Sagemaker S3 Role Arn
+  VPCId:
+    Description: VPCId of the newly created VPC
+    Value: !Ref VPC
+  NotebookARN:
+    Description: SageMaker Notebook ARN
+    Value: !GetAtt
+      - CreateNotebook
+      - NotebookInstanceArn
