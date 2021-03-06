@@ -160,7 +160,6 @@ Resources:
 # Public Subnet
 #
   PublicSubneta:
-    # Defined by the network team
     Type: 'AWS::EC2::Subnet'
     Properties:
       AvailabilityZone:
